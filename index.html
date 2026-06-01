@@ -1,35 +1,124 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=no, minimum-scale=1.0, maximum-scale=1.0">
-    <title>WebAR Mô Hình Chim - AR.js</title>
-    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
-    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
-  </head>
-  <body style="margin: 0px; overflow: hidden;">
-    
-    <a-scene embedded vr-mode-ui="enabled: false" arjs="sourceType: webcam; debugUIEnabled: false;">
-      
-      <a-assets>
-        <a-asset-item id="bird-obj" src="./assets/12274_Lizard_v1_l2.obj"></a-asset-item>
-        <a-asset-item id="bird-mtl" src="./assets/12274_Lizard_v1_l2.mtl"></a-asset-item>
-      </a-assets>
-      
-      <a-marker preset="hiro">
-        
-        <a-obj-model 
-          src="#bird-obj" 
-          mtl="#bird-mtl" 
-          position="0 0 0" 
-          scale="0.05 0.05 0.05" 
-          rotation="-90 0 0">
-        </a-obj-model>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ứng dụng Xem Video 360° Cảm Biến</title>
+    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+    <style>
+        /* Giao diện nút bấm điều khiển trên màn hình */
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            display: flex;
+            gap: 10px;
+        }
+        .btn {
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            border: 2px solid white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-family: sans-serif;
+            font-size: 14px;
+            transition: 0.3s;
+        }
+        .btn:hover {
+            background: white;
+            color: black;
+        }
+        /* Giao diện yêu cầu quyền truy cập cảm biến trên iOS */
+        #permission-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 999;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-family: sans-serif;
+            text-align: center;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
 
-      </a-marker>
-      
-      <a-entity camera></a-entity>
-      
+    <div id="permission-overlay">
+        <h2>Ứng dụng Video 360°</h2>
+        <p>Ứng dụng cần quyền truy cập cảm biến chuyển động để xoay video theo điện thoại của bạn.</p>
+        <button class="btn" id="start-btn">Bắt đầu trải nghiệm</button>
+    </div>
+
+    <div id="controls" style="display: none;">
+        <button class="btn" id="play-btn">Phát</button>
+        <button class="btn" id="pause-btn">Tạm dừng</button>
+    </div>
+
+    <a-scene loading-screen="enabled: false">
+        <a-assets>
+            <video id="video360" 
+                   src="https://bitmovin-a.akamaihd.net/content/playhouse-vr/mp4/video_1080_4000k.mp4" 
+                   preload="auto" 
+                   crossorigin="anonymous" 
+                   loop="true" 
+                   webkit-playsinline 
+                   playsinline>
+            </video>
+        </a-assets>
+
+        <a-camera look-controls="magicWindowTrackingEnabled: true; touchEnabled: true;"></a-camera>
+
+        <a-videosphere src="#video360" rotation="0 -90 0"></a-videosphere>
     </a-scene>
-  </body>
+
+    <script>
+        const video = document.getElementById('video360');
+        const overlay = document.getElementById('permission-overlay');
+        const controls = document.getElementById('controls');
+        const startBtn = document.getElementById('start-btn');
+        const playBtn = document.getElementById('play-btn');
+        const pauseBtn = document.getElementById('pause-btn');
+
+        // Hàm kích hoạt video và cảm biến
+        function initApp() {
+            // Ẩn lớp phủ, hiện thanh điều khiển
+            overlay.style.display = 'none';
+            controls.style.display = 'flex';
+            
+            // Phát video (Trình duyệt chặn tự động phát nếu không có tương tác user)
+            video.play();
+        }
+
+        // Xử lý kích hoạt (Đặc biệt quan trọng cho iPhone/iOS)
+        startBtn.addEventListener('click', function() {
+            // Kiểm tra nếu là thiết bị iOS yêu cầu cấp quyền DeviceOrientation
+            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                DeviceOrientationEvent.requestPermission()
+                    .then(permissionState => {
+                        if (permissionState === 'granted') {
+                            initApp();
+                        } else {
+                            alert('Bạn đã từ chối quyền truy cập cảm biến. Hãy tải lại trang để cấp quyền lại.');
+                            initApp(); // Vẫn chạy nhưng chỉ dùng tay vuốt được
+                        }
+                    })
+                    .catch(console.error);
+            } else {
+                // Đối với Android hoặc PC không cần xin quyền qua popup
+                initApp();
+            }
+        });
+
+        // Điều khiển nút Play/Pause
+        playBtn.addEventListener('click', () => video.play());
+        pauseBtn.addEventListener('click', () => video.pause());
+    </script>
+</body>
 </html>
